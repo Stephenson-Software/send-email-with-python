@@ -43,6 +43,14 @@ Use SSL or TLS? (s/t):
 
 Both answers log in to Gmail and send a real email containing one randomly chosen message from the list in `src/main.py`.
 
+## Tests
+The test suite uses the standard library's `unittest` module and mocks every SMTP
+connection, so running it sends no email and opens no socket. From the repository root:
+
+```bash
+python3 -m unittest discover -s tests -t .
+```
+
 ## Relevant Links
 - https://realpython.com/python-send-email/
 - https://realpython.com/lessons/sending-emails-intro-and-account-configuration/
