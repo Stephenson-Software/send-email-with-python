@@ -59,7 +59,7 @@ def useTLS():
 
     context = ssl.create_default_context()
 
-    # the context manager quits the session, including when the connection itself fails
+    # the context manager quits the session on every path out of the block
     with smtplib.SMTP(smtp_server, port) as server:
         server.ehlo() # say hello to server
         server.starttls(context=context) # start TLS encryption
