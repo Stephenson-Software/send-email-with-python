@@ -69,7 +69,7 @@ class TestUseSSL(unittest.TestCase):
 class TestUseTLS(unittest.TestCase):
     @patch("smtplib.SMTP")
     def test_connects_to_gmail_on_587_and_upgrades_before_login(self, mock_smtp):
-        server = mock_smtp.return_value
+        server = mock_smtp.return_value.__enter__.return_value
 
         with patch("builtins.print"):
             main.useTLS()
@@ -77,34 +77,36 @@ class TestUseTLS(unittest.TestCase):
         self.assertEqual(mock_smtp.call_args[0], ("smtp.gmail.com", 587))
         self.assertEqual(
             [name for name, _, _ in server.method_calls],
-            ["ehlo", "starttls", "ehlo", "login", "sendmail", "quit"],
+            ["ehlo", "starttls", "ehlo", "login", "sendmail"],
         )
         self.assertIsInstance(server.starttls.call_args[1]["context"], ssl.SSLContext)
         server.login.assert_called_once_with(
             main.EMAIL_SENDER_ADDRESS, main.EMAIL_SENDER_APP_PASSWORD
         )
-        server.quit.assert_called_once_with()
+        # the session is ended by the context manager rather than an explicit quit
+        mock_smtp.return_value.__exit__.assert_called_once()
 
     @patch("smtplib.SMTP")
-    def test_swallows_a_send_failure_and_still_quits(self, mock_smtp):
-        # characterizes the behavior reported in issue #5: the exception is
-        # printed and useTLS returns normally, so the caller sees success
-        server = mock_smtp.return_value
+    def test_propagates_a_send_failure_and_still_ends_the_session(self, mock_smtp):
+        server = mock_smtp.return_value.__enter__.return_value
         server.sendmail.side_effect = Exception("550 rejected")
 
-        with patch("builtins.print") as mock_print:
-            self.assertIsNone(main.useTLS())
+        with patch("builtins.print"):
+            with self.assertRaises(Exception) as caught:
+                main.useTLS()
 
-        server.quit.assert_called_once_with()
-        self.assertIn("550 rejected", [str(c[0][0]) for c in mock_print.call_args_list])
+        self.assertEqual(str(caught.exception), "550 rejected")
+        mock_smtp.return_value.__exit__.assert_called_once()
 
     @patch("smtplib.SMTP", side_effect=OSError("connection refused"))
-    def test_raises_unbound_local_error_when_the_connection_fails(self, mock_smtp):
-        # characterizes the bug reported in issue #4: the finally block
-        # references server before it was assigned, masking the real error
+    def test_surfaces_the_original_error_when_the_connection_fails(self, mock_smtp):
+        # a failed connect used to be masked by UnboundLocalError from the
+        # finally block referencing an unassigned server (issue #4)
         with patch("builtins.print"):
-            with self.assertRaises(UnboundLocalError):
+            with self.assertRaises(OSError) as caught:
                 main.useTLS()
+
+        self.assertEqual(str(caught.exception), "connection refused")
 
 
 class TestRun(unittest.TestCase):
@@ -134,6 +136,24 @@ class TestRun(unittest.TestCase):
         mock_ssl.assert_not_called()
         mock_tls.assert_not_called()
         mock_print.assert_called_once_with("Invalid input! Please type 's' or 't'.")
+
+    def test_a_failed_ssl_send_reports_and_exits_nonzero(self):
+        with patch("builtins.input", return_value="s"), patch.object(
+            main, "useSSL", side_effect=Exception("535 auth rejected")
+        ), patch("builtins.print") as mock_print:
+            with self.assertRaises(SystemExit) as caught:
+                main.run()
+        self.assertEqual(caught.exception.code, 1)
+        mock_print.assert_called_once_with("Failed to send email: 535 auth rejected")
+
+    def test_a_failed_tls_send_reports_and_exits_nonzero(self):
+        with patch("builtins.input", return_value="t"), patch.object(
+            main, "useTLS", side_effect=OSError("connection refused")
+        ), patch("builtins.print") as mock_print:
+            with self.assertRaises(SystemExit) as caught:
+                main.run()
+        self.assertEqual(caught.exception.code, 1)
+        mock_print.assert_called_once_with("Failed to send email: connection refused")
 
 
 if __name__ == "__main__":

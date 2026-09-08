@@ -43,6 +43,8 @@ Use SSL or TLS? (s/t):
 
 Both answers log in to Gmail and send a real email containing one randomly chosen message from the list in `src/main.py`.
 
+If the send fails — an unreachable server, a rejected login, a refused recipient — the reason is printed as `Failed to send email: <reason>` and the program exits with status 1, so `run.sh` reports the failure rather than a success.
+
 ## Tests
 The test suite uses the standard library's `unittest` module and mocks every SMTP
 connection, so running it sends no email and opens no socket. From the repository root:
