@@ -59,8 +59,8 @@ def useTLS():
 
     context = ssl.create_default_context()
 
-    try:
-        server = smtplib.SMTP(smtp_server, port)
+    # the context manager quits the session on every path out of the block
+    with smtplib.SMTP(smtp_server, port) as server:
         server.ehlo() # say hello to server
         server.starttls(context=context) # start TLS encryption
         server.ehlo() # say hello again
@@ -71,10 +71,6 @@ def useTLS():
         subject = "Test email from Python"
         body = getRandomMessage()
         sendEmail(server, sender, EMAIL_RECIPIENT, subject, body)
-    except Exception as e:
-        print(e)
-    finally:
-        server.quit()
 
 def sendEmail(server, sender, receiver, subject, body):
     message = f"From: {sender}\nTo: {receiver}\nSubject: {subject}\n\n{body}"
@@ -84,11 +80,19 @@ def sendEmail(server, sender, receiver, subject, body):
 def run():
     user_input = input("Use SSL or TLS? (s/t): ")
     if user_input == "s":
-        useSSL()
+        transport = useSSL
     elif user_input == "t":
-        useTLS()
+        transport = useTLS
     else:
         print("Invalid input! Please type 's' or 't'.")
+        return
+
+    # a failed send must not look like a successful run
+    try:
+        transport()
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        exit(1)
 
 if __name__ == "__main__":
     run()
