@@ -20,10 +20,10 @@ class TestGetRandomMessage(unittest.TestCase):
     def test_returns_a_message_from_the_list(self):
         self.assertIn(main.getRandomMessage(), main.messages)
 
-    def test_uses_the_index_random_returns(self):
-        with patch("random.randint", return_value=3) as mock_randint:
-            self.assertEqual(main.getRandomMessage(), main.messages[3])
-        mock_randint.assert_called_once_with(0, len(main.messages) - 1)
+    def test_picks_from_the_whole_list_with_random_choice(self):
+        with patch("random.choice", return_value="chosen") as mock_choice:
+            self.assertEqual(main.getRandomMessage(), "chosen")
+        mock_choice.assert_called_once_with(main.messages)
 
 
 class TestSendEmail(unittest.TestCase):
@@ -44,6 +44,21 @@ class TestSendEmail(unittest.TestCase):
         with patch("builtins.print") as mock_print:
             main.sendEmail(server, "a@example.com", "b@example.com", "s", "b")
         mock_print.assert_called_with("Email sent to b@example.com!")
+
+
+class TestSendRandomMessage(unittest.TestCase):
+    def test_sends_a_random_message_from_the_configured_sender_to_the_recipient(self):
+        server = MagicMock()
+        with patch.object(main, "getRandomMessage", return_value="picked body"), patch(
+            "builtins.print"
+        ):
+            main.sendRandomMessage(server)
+        server.sendmail.assert_called_once_with(
+            main.EMAIL_SENDER_ADDRESS,
+            main.EMAIL_RECIPIENT,
+            f"From: {main.EMAIL_SENDER_ADDRESS}\nTo: {main.EMAIL_RECIPIENT}\n"
+            f"Subject: {main.EMAIL_SUBJECT}\n\npicked body",
+        )
 
 
 class TestUseSSL(unittest.TestCase):
