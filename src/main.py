@@ -16,6 +16,12 @@ EMAIL_SENDER_ADDRESS = os.environ.get("EMAIL_SENDER_ADDRESS")
 EMAIL_SENDER_APP_PASSWORD = os.environ.get("EMAIL_SENDER_APP_PASSWORD")
 EMAIL_RECIPIENT = os.environ.get("EMAIL_RECIPIENT")
 
+# gmail smtp endpoint and subject shared by both transports
+SMTP_HOST = "smtp.gmail.com"
+SMTP_SSL_PORT = 465
+SMTP_TLS_PORT = 587
+EMAIL_SUBJECT = "Test email from Python"
+
 # list of messages to send
 messages = [
     "The purple elephant danced wildly on the flying pizza.",
@@ -31,46 +37,33 @@ messages = [
 ]
 
 def getRandomMessage():
-    return messages[random.randint(0, len(messages) - 1)]
+    return random.choice(messages)
 
 def useSSL():
     print("Logging in with SSL...")
-    smtp_server = "smtp.gmail.com"
-    port = 465
-
     context = ssl.create_default_context()
 
-    with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_SSL_PORT, context=context) as server:
         server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_APP_PASSWORD)
         print("Login successful!")
-
-        # send email
-        subject = "Test email from Python"
-        body = getRandomMessage()
-        sendEmail(server, EMAIL_SENDER_ADDRESS, EMAIL_RECIPIENT, subject, body)
+        sendRandomMessage(server)
 
 def useTLS():
     print("Logging in with TLS...")
-    smtp_server = "smtp.gmail.com"
-    port = 587
-
-    sender = EMAIL_SENDER_ADDRESS
-    password = EMAIL_SENDER_APP_PASSWORD
-
     context = ssl.create_default_context()
 
     # the context manager quits the session on every path out of the block
-    with smtplib.SMTP(smtp_server, port) as server:
+    with smtplib.SMTP(SMTP_HOST, SMTP_TLS_PORT) as server:
         server.ehlo() # say hello to server
         server.starttls(context=context) # start TLS encryption
         server.ehlo() # say hello again
-        server.login(sender, password)
+        server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_APP_PASSWORD)
         print("Login successful!")
+        sendRandomMessage(server)
 
-        # send email
-        subject = "Test email from Python"
-        body = getRandomMessage()
-        sendEmail(server, sender, EMAIL_RECIPIENT, subject, body)
+def sendRandomMessage(server):
+    # send one of the messages above over an already logged-in session
+    sendEmail(server, EMAIL_SENDER_ADDRESS, EMAIL_RECIPIENT, EMAIL_SUBJECT, getRandomMessage())
 
 def sendEmail(server, sender, receiver, subject, body):
     message = f"From: {sender}\nTo: {receiver}\nSubject: {subject}\n\n{body}"
