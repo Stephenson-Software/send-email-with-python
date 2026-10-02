@@ -33,11 +33,26 @@ class TestSendEmail(unittest.TestCase):
             main.sendEmail(
                 server, "a@example.com", "b@example.com", "Subject line", "Body line"
             )
-        server.sendmail.assert_called_once_with(
-            "a@example.com",
-            "b@example.com",
-            "From: a@example.com\nTo: b@example.com\nSubject: Subject line\n\nBody line",
-        )
+        (message,), _ = server.send_message.call_args
+        self.assertEqual(message["From"], "a@example.com")
+        self.assertEqual(message["To"], "b@example.com")
+        self.assertEqual(message["Subject"], "Subject line")
+        self.assertEqual(message.get_content(), "Body line\n")
+        server.sendmail.assert_not_called()
+
+    def test_rejects_a_newline_in_a_header_instead_of_injecting_it(self):
+        server = MagicMock()
+        with patch("builtins.print"):
+            with self.assertRaises(ValueError):
+                main.sendEmail(
+                    server,
+                    "a@example.com",
+                    "b@example.com",
+                    "Hello\nBcc: c@example.com",
+                    "Body line",
+                )
+        server.send_message.assert_not_called()
+        server.sendmail.assert_not_called()
 
     def test_reports_the_recipient(self):
         server = MagicMock()
@@ -53,12 +68,11 @@ class TestSendRandomMessage(unittest.TestCase):
             "builtins.print"
         ):
             main.sendRandomMessage(server)
-        server.sendmail.assert_called_once_with(
-            main.EMAIL_SENDER_ADDRESS,
-            main.EMAIL_RECIPIENT,
-            f"From: {main.EMAIL_SENDER_ADDRESS}\nTo: {main.EMAIL_RECIPIENT}\n"
-            f"Subject: {main.EMAIL_SUBJECT}\n\npicked body",
-        )
+        (message,), _ = server.send_message.call_args
+        self.assertEqual(message["From"], main.EMAIL_SENDER_ADDRESS)
+        self.assertEqual(message["To"], main.EMAIL_RECIPIENT)
+        self.assertEqual(message["Subject"], main.EMAIL_SUBJECT)
+        self.assertEqual(message.get_content(), "picked body\n")
 
 
 class TestUseSSL(unittest.TestCase):
@@ -74,11 +88,11 @@ class TestUseSSL(unittest.TestCase):
         server.login.assert_called_once_with(
             main.EMAIL_SENDER_ADDRESS, main.EMAIL_SENDER_APP_PASSWORD
         )
-        sender, receiver, message = server.sendmail.call_args[0]
-        self.assertEqual(sender, main.EMAIL_SENDER_ADDRESS)
-        self.assertEqual(receiver, main.EMAIL_RECIPIENT)
-        self.assertIn("Subject: Test email from Python", message)
-        self.assertTrue(any(m in message for m in main.messages))
+        (message,), _ = server.send_message.call_args
+        self.assertEqual(message["From"], main.EMAIL_SENDER_ADDRESS)
+        self.assertEqual(message["To"], main.EMAIL_RECIPIENT)
+        self.assertEqual(message["Subject"], "Test email from Python")
+        self.assertIn(message.get_content().rstrip("\n"), main.messages)
 
 
 class TestUseTLS(unittest.TestCase):
@@ -92,7 +106,7 @@ class TestUseTLS(unittest.TestCase):
         self.assertEqual(mock_smtp.call_args[0], ("smtp.gmail.com", 587))
         self.assertEqual(
             [name for name, _, _ in server.method_calls],
-            ["ehlo", "starttls", "ehlo", "login", "sendmail"],
+            ["ehlo", "starttls", "ehlo", "login", "send_message"],
         )
         self.assertIsInstance(server.starttls.call_args[1]["context"], ssl.SSLContext)
         server.login.assert_called_once_with(
@@ -104,7 +118,7 @@ class TestUseTLS(unittest.TestCase):
     @patch("smtplib.SMTP")
     def test_propagates_a_send_failure_and_still_ends_the_session(self, mock_smtp):
         server = mock_smtp.return_value.__enter__.return_value
-        server.sendmail.side_effect = Exception("550 rejected")
+        server.send_message.side_effect = Exception("550 rejected")
 
         with patch("builtins.print"):
             with self.assertRaises(Exception) as caught:

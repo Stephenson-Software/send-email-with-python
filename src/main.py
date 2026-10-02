@@ -1,6 +1,7 @@
 import os
 import random
 import smtplib, ssl
+from email.message import EmailMessage
 
 # email credentials
 if os.environ.get("EMAIL_SENDER_ADDRESS") is None:
@@ -66,8 +67,13 @@ def sendRandomMessage(server):
     sendEmail(server, EMAIL_SENDER_ADDRESS, EMAIL_RECIPIENT, EMAIL_SUBJECT, getRandomMessage())
 
 def sendEmail(server, sender, receiver, subject, body):
-    message = f"From: {sender}\nTo: {receiver}\nSubject: {subject}\n\n{body}"
-    server.sendmail(sender, receiver, message)
+    # headers are set individually so a newline in one is rejected, not injected
+    message = EmailMessage()
+    message["From"] = sender
+    message["To"] = receiver
+    message["Subject"] = subject
+    message.set_content(body)
+    server.send_message(message)
     print("Email sent to " + receiver + "!")
 
 def run():
