@@ -1,4 +1,5 @@
 import os
+import runpy
 import ssl
 import sys
 import unittest
@@ -14,6 +15,44 @@ os.environ.setdefault("EMAIL_RECIPIENT", "recipient@example.com")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import main
+
+MAIN_PATH = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
+CREDENTIAL_VARIABLES = [
+    "EMAIL_SENDER_ADDRESS",
+    "EMAIL_SENDER_APP_PASSWORD",
+    "EMAIL_RECIPIENT",
+]
+
+
+class TestCredentialGuards(unittest.TestCase):
+    # the guards run at import time, so main.py is re-executed with one
+    # variable removed rather than exercised through the imported module
+    def run_main_without(self, variable):
+        with patch.dict(os.environ), patch(
+            "builtins.input", side_effect=AssertionError("prompted")
+        ) as mock_input, patch(
+            "smtplib.SMTP", side_effect=AssertionError("connected")
+        ) as mock_smtp, patch(
+            "smtplib.SMTP_SSL", side_effect=AssertionError("connected")
+        ) as mock_smtp_ssl, patch(
+            "builtins.print"
+        ) as mock_print:
+            del os.environ[variable]
+            with self.assertRaises(SystemExit) as caught:
+                runpy.run_path(MAIN_PATH, run_name="__main__")
+        mock_input.assert_not_called()
+        mock_smtp.assert_not_called()
+        mock_smtp_ssl.assert_not_called()
+        return caught.exception, mock_print
+
+    def test_each_missing_variable_is_named_and_exits_before_prompting(self):
+        for variable in CREDENTIAL_VARIABLES:
+            with self.subTest(variable=variable):
+                exception, mock_print = self.run_main_without(variable)
+                self.assertEqual(exception.code, 1)
+                mock_print.assert_called_once_with(
+                    variable + " environment variable not set!"
+                )
 
 
 class TestGetRandomMessage(unittest.TestCase):
