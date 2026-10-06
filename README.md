@@ -40,6 +40,7 @@ Use SSL or TLS? (s/t):
 - `s` — connects to `smtp.gmail.com:465` over SSL
 - `t` — connects to `smtp.gmail.com:587` and upgrades the connection with STARTTLS
 - Anything else — prints `Invalid input! Please type 's' or 't'.` and exits without connecting
+- No answer (Ctrl-C, Ctrl-D, or a closed stdin) — prints `No answer given! Exiting without sending.` and exits with status 1 without connecting
 
 Both answers log in to Gmail and send a real email containing one randomly chosen message from the list in `src/main.py`.
 
