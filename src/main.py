@@ -77,7 +77,12 @@ def sendEmail(server, sender, receiver, subject, body):
     print("Email sent to " + receiver + "!")
 
 def run():
-    user_input = input("Use SSL or TLS? (s/t): ")
+    # closed stdin or ctrl-c at the prompt ends the run without connecting
+    try:
+        user_input = input("Use SSL or TLS? (s/t): ")
+    except (EOFError, KeyboardInterrupt):
+        print("\nNo answer given! Exiting without sending.")
+        exit(1)
     if user_input == "s":
         transport = useSSL
     elif user_input == "t":

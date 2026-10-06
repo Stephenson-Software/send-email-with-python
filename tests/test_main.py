@@ -205,6 +205,23 @@ class TestRun(unittest.TestCase):
         mock_tls.assert_not_called()
         mock_print.assert_called_once_with("Invalid input! Please type 's' or 't'.")
 
+    def test_eof_or_ctrl_c_at_the_prompt_exits_nonzero_without_connecting(self):
+        for interruption in (EOFError, KeyboardInterrupt):
+            with self.subTest(interruption=interruption.__name__):
+                with patch("builtins.input", side_effect=interruption), patch.object(
+                    main, "useSSL"
+                ) as mock_ssl, patch.object(main, "useTLS") as mock_tls, patch(
+                    "builtins.print"
+                ) as mock_print:
+                    with self.assertRaises(SystemExit) as caught:
+                        main.run()
+                self.assertEqual(caught.exception.code, 1)
+                mock_ssl.assert_not_called()
+                mock_tls.assert_not_called()
+                mock_print.assert_called_once_with(
+                    "\nNo answer given! Exiting without sending."
+                )
+
     def test_a_failed_ssl_send_reports_and_exits_nonzero(self):
         with patch("builtins.input", return_value="s"), patch.object(
             main, "useSSL", side_effect=Exception("535 auth rejected")
