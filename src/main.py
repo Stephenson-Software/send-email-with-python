@@ -3,14 +3,14 @@ import random
 import smtplib, ssl
 from email.message import EmailMessage
 
-# email credentials
-if os.environ.get("EMAIL_SENDER_ADDRESS") is None:
+# email credentials (an empty value counts as not set)
+if not os.environ.get("EMAIL_SENDER_ADDRESS"):
     print("EMAIL_SENDER_ADDRESS environment variable not set!")
     exit(1)
-if os.environ.get("EMAIL_SENDER_APP_PASSWORD") is None:
+if not os.environ.get("EMAIL_SENDER_APP_PASSWORD"):
     print("EMAIL_SENDER_APP_PASSWORD environment variable not set!")
     exit(1)
-if os.environ.get("EMAIL_RECIPIENT") is None:
+if not os.environ.get("EMAIL_RECIPIENT"):
     print("EMAIL_RECIPIENT environment variable not set!")
     exit(1)
 EMAIL_SENDER_ADDRESS = os.environ.get("EMAIL_SENDER_ADDRESS")

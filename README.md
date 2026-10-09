@@ -6,7 +6,7 @@ This repository is for practicing sending email with python.
 - A Gmail account with 2-Step Verification enabled and an [app password](https://support.google.com/accounts/answer/185833) generated for it
 
 ## Configuration
-Three environment variables are read at startup. If any is missing, the program prints which one and exits with status 1 before any connection is attempted.
+Three environment variables are read at startup. If any is missing or empty, the program prints which one and exits with status 1 before any connection is attempted.
 
 | Variable | Description |
 | --- | --- |
