@@ -26,8 +26,8 @@ CREDENTIAL_VARIABLES = [
 
 class TestCredentialGuards(unittest.TestCase):
     # the guards run at import time, so main.py is re-executed with one
-    # variable removed rather than exercised through the imported module
-    def run_main_without(self, variable):
+    # variable removed or emptied rather than exercised through the imported module
+    def run_main_without(self, variable, empty=False):
         with patch.dict(os.environ), patch(
             "builtins.input", side_effect=AssertionError("prompted")
         ) as mock_input, patch(
@@ -37,7 +37,10 @@ class TestCredentialGuards(unittest.TestCase):
         ) as mock_smtp_ssl, patch(
             "builtins.print"
         ) as mock_print:
-            del os.environ[variable]
+            if empty:
+                os.environ[variable] = ""
+            else:
+                del os.environ[variable]
             with self.assertRaises(SystemExit) as caught:
                 runpy.run_path(MAIN_PATH, run_name="__main__")
         mock_input.assert_not_called()
@@ -49,6 +52,15 @@ class TestCredentialGuards(unittest.TestCase):
         for variable in CREDENTIAL_VARIABLES:
             with self.subTest(variable=variable):
                 exception, mock_print = self.run_main_without(variable)
+                self.assertEqual(exception.code, 1)
+                mock_print.assert_called_once_with(
+                    variable + " environment variable not set!"
+                )
+
+    def test_each_empty_variable_is_named_and_exits_before_prompting(self):
+        for variable in CREDENTIAL_VARIABLES:
+            with self.subTest(variable=variable):
+                exception, mock_print = self.run_main_without(variable, empty=True)
                 self.assertEqual(exception.code, 1)
                 mock_print.assert_called_once_with(
                     variable + " environment variable not set!"
