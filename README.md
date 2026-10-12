@@ -25,7 +25,9 @@ export EMAIL_RECIPIENT="someone@example.com"
 ./run.sh
 ```
 
-Or without the wrapper script:
+`run.sh` finds `src/main.py` relative to its own location, so it can be run from any directory (e.g. `path/to/send-email-with-python/run.sh`).
+
+Or without the wrapper script, from the repository root:
 
 ```bash
 python3 src/main.py
@@ -39,7 +41,7 @@ Use SSL or TLS? (s/t):
 
 - `s` — connects to `smtp.gmail.com:465` over SSL
 - `t` — connects to `smtp.gmail.com:587` and upgrades the connection with STARTTLS
-- Anything else — prints `Invalid input! Please type 's' or 't'.` and exits without connecting
+- Anything else — prints `Invalid input! Please type 's' or 't'.` and exits with status 1 without connecting
 - No answer (Ctrl-C, Ctrl-D, or a closed stdin) — prints `No answer given! Exiting without sending.` and exits with status 1 without connecting
 
 Both answers log in to Gmail and send a real email containing one randomly chosen message from the list in `src/main.py`.
