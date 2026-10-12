@@ -89,7 +89,7 @@ def run():
         transport = useTLS
     else:
         print("Invalid input! Please type 's' or 't'.")
-        return
+        exit(1)
 
     # a failed send must not look like a successful run
     try:

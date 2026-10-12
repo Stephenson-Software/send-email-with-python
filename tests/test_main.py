@@ -1,6 +1,8 @@
 import os
 import runpy
+import shutil
 import ssl
+import subprocess
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
@@ -17,6 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import main
 
 MAIN_PATH = os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
+RUN_SH_PATH = os.path.join(os.path.dirname(__file__), "..", "run.sh")
 CREDENTIAL_VARIABLES = [
     "EMAIL_SENDER_ADDRESS",
     "EMAIL_SENDER_APP_PASSWORD",
@@ -206,13 +209,15 @@ class TestRun(unittest.TestCase):
         mock_tls.assert_called_once_with()
         mock_ssl.assert_not_called()
 
-    def test_anything_else_connects_to_nothing(self):
+    def test_anything_else_exits_nonzero_without_connecting(self):
         with patch("builtins.input", return_value="x"), patch.object(
             main, "useSSL"
         ) as mock_ssl, patch.object(main, "useTLS") as mock_tls, patch(
             "builtins.print"
         ) as mock_print:
-            main.run()
+            with self.assertRaises(SystemExit) as caught:
+                main.run()
+        self.assertEqual(caught.exception.code, 1)
         mock_ssl.assert_not_called()
         mock_tls.assert_not_called()
         mock_print.assert_called_once_with("Invalid input! Please type 's' or 't'.")
@@ -251,6 +256,26 @@ class TestRun(unittest.TestCase):
                 main.run()
         self.assertEqual(caught.exception.code, 1)
         mock_print.assert_called_once_with("Failed to send email: connection refused")
+
+
+class TestRunScript(unittest.TestCase):
+    @unittest.skipIf(shutil.which("bash") is None, "bash not available")
+    def test_finds_main_py_when_launched_outside_the_repository_root(self):
+        # with the credentials removed, reaching main.py means its first guard
+        # fires and exits 1 before any prompt or connection
+        env = {k: v for k, v in os.environ.items() if k not in CREDENTIAL_VARIABLES}
+        result = subprocess.run(
+            ["bash", os.path.abspath(RUN_SH_PATH)],
+            cwd=os.path.dirname(__file__),
+            env=env,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(
+            result.stdout, "EMAIL_SENDER_ADDRESS environment variable not set!\n"
+        )
 
 
 if __name__ == "__main__":
