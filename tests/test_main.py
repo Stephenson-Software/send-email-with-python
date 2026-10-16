@@ -209,6 +209,18 @@ class TestRun(unittest.TestCase):
         mock_tls.assert_called_once_with()
         mock_ssl.assert_not_called()
 
+    def test_case_and_surrounding_whitespace_are_ignored(self):
+        for answer, chosen in (("S", "useSSL"), (" t\t", "useTLS"), ("T ", "useTLS")):
+            with self.subTest(answer=answer):
+                with patch("builtins.input", return_value=answer), patch.object(
+                    main, "useSSL"
+                ) as mock_ssl, patch.object(main, "useTLS") as mock_tls:
+                    main.run()
+                mocks = {"useSSL": mock_ssl, "useTLS": mock_tls}
+                mocks.pop(chosen).assert_called_once_with()
+                for other in mocks.values():
+                    other.assert_not_called()
+
     def test_anything_else_exits_nonzero_without_connecting(self):
         with patch("builtins.input", return_value="x"), patch.object(
             main, "useSSL"
@@ -256,6 +268,19 @@ class TestRun(unittest.TestCase):
                 main.run()
         self.assertEqual(caught.exception.code, 1)
         mock_print.assert_called_once_with("Failed to send email: connection refused")
+
+    def test_ctrl_c_during_the_send_exits_nonzero_without_a_traceback(self):
+        for answer, transport in (("s", "useSSL"), ("t", "useTLS")):
+            with self.subTest(transport=transport):
+                with patch("builtins.input", return_value=answer), patch.object(
+                    main, transport, side_effect=KeyboardInterrupt
+                ), patch("builtins.print") as mock_print:
+                    with self.assertRaises(SystemExit) as caught:
+                        main.run()
+                self.assertEqual(caught.exception.code, 1)
+                mock_print.assert_called_once_with(
+                    "\nInterrupted! The email may not have been sent."
+                )
 
 
 class TestRunScript(unittest.TestCase):

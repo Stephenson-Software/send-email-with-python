@@ -39,6 +39,8 @@ Either way the following prompt appears:
 Use SSL or TLS? (s/t): 
 ```
 
+The answer is case-insensitive and surrounding whitespace is ignored, so `S` or ` t ` work too.
+
 - `s` — connects to `smtp.gmail.com:465` over SSL
 - `t` — connects to `smtp.gmail.com:587` and upgrades the connection with STARTTLS
 - Anything else — prints `Invalid input! Please type 's' or 't'.` and exits with status 1 without connecting
@@ -46,7 +48,7 @@ Use SSL or TLS? (s/t):
 
 Both answers log in to Gmail and send a real email containing one randomly chosen message from the list in `src/main.py`.
 
-If the send fails — an unreachable server, a rejected login, a refused recipient — the reason is printed as `Failed to send email: <reason>` and the program exits with status 1, so `run.sh` reports the failure rather than a success.
+If the send fails — an unreachable server, a rejected login, a refused recipient — the reason is printed as `Failed to send email: <reason>` and the program exits with status 1, so `run.sh` reports the failure rather than a success. Pressing Ctrl-C while connecting or sending prints `Interrupted! The email may not have been sent.` and also exits with status 1.
 
 ## Tests
 The test suite uses the standard library's `unittest` module and mocks every SMTP
