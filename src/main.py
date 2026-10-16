@@ -83,6 +83,8 @@ def run():
     except (EOFError, KeyboardInterrupt):
         print("\nNo answer given! Exiting without sending.")
         exit(1)
+    # case and surrounding whitespace don't change the answer
+    user_input = user_input.strip().lower()
     if user_input == "s":
         transport = useSSL
     elif user_input == "t":
@@ -94,6 +96,9 @@ def run():
     # a failed send must not look like a successful run
     try:
         transport()
+    except KeyboardInterrupt:
+        print("\nInterrupted! The email may not have been sent.")
+        exit(1)
     except Exception as e:
         print(f"Failed to send email: {e}")
         exit(1)
