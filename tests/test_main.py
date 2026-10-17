@@ -5,7 +5,7 @@ import ssl
 import subprocess
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 # main.py reads these at import time and exits when one is missing,
 # so they have to be set before the import below
@@ -29,8 +29,8 @@ CREDENTIAL_VARIABLES = [
 
 class TestCredentialGuards(unittest.TestCase):
     # the guards run at import time, so main.py is re-executed with one
-    # variable removed or emptied rather than exercised through the imported module
-    def run_main_without(self, variable, empty=False):
+    # or more variables removed or emptied rather than exercised through the imported module
+    def run_main_without(self, *variables, empty=False):
         with patch.dict(os.environ), patch(
             "builtins.input", side_effect=AssertionError("prompted")
         ) as mock_input, patch(
@@ -40,10 +40,11 @@ class TestCredentialGuards(unittest.TestCase):
         ) as mock_smtp_ssl, patch(
             "builtins.print"
         ) as mock_print:
-            if empty:
-                os.environ[variable] = ""
-            else:
-                del os.environ[variable]
+            for variable in variables:
+                if empty:
+                    os.environ[variable] = ""
+                else:
+                    del os.environ[variable]
             with self.assertRaises(SystemExit) as caught:
                 runpy.run_path(MAIN_PATH, run_name="__main__")
         mock_input.assert_not_called()
@@ -68,6 +69,34 @@ class TestCredentialGuards(unittest.TestCase):
                 mock_print.assert_called_once_with(
                     variable + " environment variable not set!"
                 )
+
+    def test_every_missing_or_empty_variable_is_named_in_one_run(self):
+        for empty in (False, True):
+            with self.subTest(empty=empty):
+                exception, mock_print = self.run_main_without(
+                    *CREDENTIAL_VARIABLES, empty=empty
+                )
+                self.assertEqual(exception.code, 1)
+                self.assertEqual(
+                    mock_print.call_args_list,
+                    [
+                        call(variable + " environment variable not set!")
+                        for variable in CREDENTIAL_VARIABLES
+                    ],
+                )
+
+    def test_only_the_missing_variables_are_named(self):
+        exception, mock_print = self.run_main_without(
+            "EMAIL_SENDER_ADDRESS", "EMAIL_RECIPIENT"
+        )
+        self.assertEqual(exception.code, 1)
+        self.assertEqual(
+            mock_print.call_args_list,
+            [
+                call("EMAIL_SENDER_ADDRESS environment variable not set!"),
+                call("EMAIL_RECIPIENT environment variable not set!"),
+            ],
+        )
 
 
 class TestGetRandomMessage(unittest.TestCase):
@@ -286,8 +315,8 @@ class TestRun(unittest.TestCase):
 class TestRunScript(unittest.TestCase):
     @unittest.skipIf(shutil.which("bash") is None, "bash not available")
     def test_finds_main_py_when_launched_outside_the_repository_root(self):
-        # with the credentials removed, reaching main.py means its first guard
-        # fires and exits 1 before any prompt or connection
+        # with the credentials removed, reaching main.py means its guards
+        # name all three and exit 1 before any prompt or connection
         env = {k: v for k, v in os.environ.items() if k not in CREDENTIAL_VARIABLES}
         result = subprocess.run(
             ["bash", os.path.abspath(RUN_SH_PATH)],
@@ -299,7 +328,11 @@ class TestRunScript(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertEqual(
-            result.stdout, "EMAIL_SENDER_ADDRESS environment variable not set!\n"
+            result.stdout,
+            "".join(
+                variable + " environment variable not set!\n"
+                for variable in CREDENTIAL_VARIABLES
+            ),
         )
 
 
