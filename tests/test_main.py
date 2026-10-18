@@ -298,6 +298,33 @@ class TestRun(unittest.TestCase):
         self.assertEqual(caught.exception.code, 1)
         mock_print.assert_called_once_with("Failed to send email: connection refused")
 
+    def test_a_rejected_login_names_the_credentials_to_check(self):
+        rejection = main.smtplib.SMTPAuthenticationError(
+            534, b"5.7.9 Application-specific password required."
+        )
+        for answer, transport in (("s", "useSSL"), ("t", "useTLS")):
+            with self.subTest(transport=transport):
+                with patch("builtins.input", return_value=answer), patch.object(
+                    main, transport, side_effect=rejection
+                ), patch("builtins.print") as mock_print:
+                    with self.assertRaises(SystemExit) as caught:
+                        main.run()
+                self.assertEqual(caught.exception.code, 1)
+                self.assertEqual(
+                    mock_print.call_args_list,
+                    [
+                        call("Failed to send email: " + str(rejection)),
+                        call(
+                            "Login rejected! Check EMAIL_SENDER_ADDRESS, and that "
+                            "EMAIL_SENDER_APP_PASSWORD is an app password, not the "
+                            "account password."
+                        ),
+                    ],
+                )
+                # the password value itself is never echoed back
+                for printed in mock_print.call_args_list:
+                    self.assertNotIn(main.EMAIL_SENDER_APP_PASSWORD, printed.args[0])
+
     def test_ctrl_c_during_the_send_exits_nonzero_without_a_traceback(self):
         for answer, transport in (("s", "useSSL"), ("t", "useTLS")):
             with self.subTest(transport=transport):
