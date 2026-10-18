@@ -100,6 +100,11 @@ def run():
     except KeyboardInterrupt:
         print("\nInterrupted! The email may not have been sent.")
         exit(1)
+    except smtplib.SMTPAuthenticationError as e:
+        # a rejected login is the likeliest first-run failure, so say what to check
+        print(f"Failed to send email: {e}")
+        print("Login rejected! Check EMAIL_SENDER_ADDRESS, and that EMAIL_SENDER_APP_PASSWORD is an app password, not the account password.")
+        exit(1)
     except Exception as e:
         print(f"Failed to send email: {e}")
         exit(1)
