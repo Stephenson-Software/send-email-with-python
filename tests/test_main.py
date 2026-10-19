@@ -363,5 +363,30 @@ class TestRunScript(unittest.TestCase):
         )
 
 
+class TestWithoutSite(unittest.TestCase):
+    # -S skips the site module, which is what defines the bare exit()
+    def run_main_without_site(self, env, stdin):
+        return subprocess.run(
+            [sys.executable, "-S", os.path.abspath(MAIN_PATH)],
+            env=env,
+            input=stdin,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_missing_credentials_exit_1_without_a_traceback(self):
+        env = {k: v for k, v in os.environ.items() if k not in CREDENTIAL_VARIABLES}
+        result = self.run_main_without_site(env, "")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, "")
+
+    def test_invalid_input_exits_1_without_a_traceback(self):
+        # the answer is rejected before any connection is attempted
+        result = self.run_main_without_site(dict(os.environ), "x\n")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stderr, "")
+        self.assertIn("Invalid input! Please type 's' or 't'.", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

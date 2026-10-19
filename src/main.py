@@ -1,6 +1,7 @@
 import os
 import random
 import smtplib, ssl
+import sys
 from email.message import EmailMessage
 
 # email credentials (an empty value counts as not set)
@@ -13,7 +14,7 @@ missingVariables = [
 for name in missingVariables:
     print(name + " environment variable not set!")
 if missingVariables:
-    exit(1)
+    sys.exit(1)
 EMAIL_SENDER_ADDRESS = os.environ.get("EMAIL_SENDER_ADDRESS")
 EMAIL_SENDER_APP_PASSWORD = os.environ.get("EMAIL_SENDER_APP_PASSWORD")
 EMAIL_RECIPIENT = os.environ.get("EMAIL_RECIPIENT")
@@ -83,7 +84,7 @@ def run():
         user_input = input("Use SSL or TLS? (s/t): ")
     except (EOFError, KeyboardInterrupt):
         print("\nNo answer given! Exiting without sending.")
-        exit(1)
+        sys.exit(1)
     # case and surrounding whitespace don't change the answer
     user_input = user_input.strip().lower()
     if user_input == "s":
@@ -92,22 +93,22 @@ def run():
         transport = useTLS
     else:
         print("Invalid input! Please type 's' or 't'.")
-        exit(1)
+        sys.exit(1)
 
     # a failed send must not look like a successful run
     try:
         transport()
     except KeyboardInterrupt:
         print("\nInterrupted! The email may not have been sent.")
-        exit(1)
+        sys.exit(1)
     except smtplib.SMTPAuthenticationError as e:
         # a rejected login is the likeliest first-run failure, so say what to check
         print(f"Failed to send email: {e}")
         print("Login rejected! Check EMAIL_SENDER_ADDRESS, and that EMAIL_SENDER_APP_PASSWORD is an app password, not the account password.")
-        exit(1)
+        sys.exit(1)
     except Exception as e:
         print(f"Failed to send email: {e}")
-        exit(1)
+        sys.exit(1)
 
 if __name__ == "__main__":
     run()
