@@ -176,6 +176,42 @@ class TestUseSSL(unittest.TestCase):
         self.assertEqual(message["To"], main.EMAIL_RECIPIENT)
         self.assertEqual(message["Subject"], "Test email from Python")
         self.assertIn(message.get_content().rstrip("\n"), main.messages)
+        mock_smtp_ssl.return_value.__exit__.assert_called_once()
+
+    @patch("smtplib.SMTP_SSL")
+    def test_propagates_a_send_failure_and_still_ends_the_session(self, mock_smtp_ssl):
+        server = mock_smtp_ssl.return_value.__enter__.return_value
+        server.send_message.side_effect = Exception("550 rejected")
+
+        with patch("builtins.print"):
+            with self.assertRaises(Exception) as caught:
+                main.useSSL()
+
+        self.assertEqual(str(caught.exception), "550 rejected")
+        mock_smtp_ssl.return_value.__exit__.assert_called_once()
+
+    @patch("smtplib.SMTP_SSL")
+    def test_propagates_a_rejected_login_without_sending(self, mock_smtp_ssl):
+        # run() relies on this reaching it to print the login hint
+        server = mock_smtp_ssl.return_value.__enter__.return_value
+        server.login.side_effect = main.smtplib.SMTPAuthenticationError(
+            535, b"rejected"
+        )
+
+        with patch("builtins.print"):
+            with self.assertRaises(main.smtplib.SMTPAuthenticationError):
+                main.useSSL()
+
+        server.send_message.assert_not_called()
+        mock_smtp_ssl.return_value.__exit__.assert_called_once()
+
+    @patch("smtplib.SMTP_SSL", side_effect=OSError("connection refused"))
+    def test_surfaces_the_original_error_when_the_connection_fails(self, mock_smtp_ssl):
+        with patch("builtins.print"):
+            with self.assertRaises(OSError) as caught:
+                main.useSSL()
+
+        self.assertEqual(str(caught.exception), "connection refused")
 
 
 class TestUseTLS(unittest.TestCase):
