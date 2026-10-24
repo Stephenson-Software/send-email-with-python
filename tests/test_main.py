@@ -29,8 +29,8 @@ CREDENTIAL_VARIABLES = [
 
 class TestCredentialGuards(unittest.TestCase):
     # the guards run at import time, so main.py is re-executed with one
-    # or more variables removed or emptied rather than exercised through the imported module
-    def run_main_without(self, *variables, empty=False):
+    # or more variables removed or replaced rather than exercised through the imported module
+    def run_main_without(self, *variables, value=None):
         with patch.dict(os.environ), patch(
             "builtins.input", side_effect=AssertionError("prompted")
         ) as mock_input, patch(
@@ -41,10 +41,10 @@ class TestCredentialGuards(unittest.TestCase):
             "builtins.print"
         ) as mock_print:
             for variable in variables:
-                if empty:
-                    os.environ[variable] = ""
-                else:
+                if value is None:
                     del os.environ[variable]
+                else:
+                    os.environ[variable] = value
             with self.assertRaises(SystemExit) as caught:
                 runpy.run_path(MAIN_PATH, run_name="__main__")
         mock_input.assert_not_called()
@@ -64,17 +64,26 @@ class TestCredentialGuards(unittest.TestCase):
     def test_each_empty_variable_is_named_and_exits_before_prompting(self):
         for variable in CREDENTIAL_VARIABLES:
             with self.subTest(variable=variable):
-                exception, mock_print = self.run_main_without(variable, empty=True)
+                exception, mock_print = self.run_main_without(variable, value="")
                 self.assertEqual(exception.code, 1)
                 mock_print.assert_called_once_with(
                     variable + " environment variable not set!"
                 )
 
-    def test_every_missing_or_empty_variable_is_named_in_one_run(self):
-        for empty in (False, True):
-            with self.subTest(empty=empty):
+    def test_each_whitespace_only_variable_is_named_and_exits_before_prompting(self):
+        for variable in CREDENTIAL_VARIABLES:
+            with self.subTest(variable=variable):
+                exception, mock_print = self.run_main_without(variable, value=" \t ")
+                self.assertEqual(exception.code, 1)
+                mock_print.assert_called_once_with(
+                    variable + " environment variable not set!"
+                )
+
+    def test_every_missing_empty_or_whitespace_only_variable_is_named_in_one_run(self):
+        for value in (None, "", " \t "):
+            with self.subTest(value=value):
                 exception, mock_print = self.run_main_without(
-                    *CREDENTIAL_VARIABLES, empty=empty
+                    *CREDENTIAL_VARIABLES, value=value
                 )
                 self.assertEqual(exception.code, 1)
                 self.assertEqual(

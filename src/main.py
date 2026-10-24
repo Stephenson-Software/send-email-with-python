@@ -4,12 +4,12 @@ import smtplib, ssl
 import sys
 from email.message import EmailMessage
 
-# email credentials (an empty value counts as not set)
+# email credentials (an empty or whitespace-only value counts as not set)
 # every missing one is named before exiting, so one run reports them all
 missingVariables = [
     name
     for name in ["EMAIL_SENDER_ADDRESS", "EMAIL_SENDER_APP_PASSWORD", "EMAIL_RECIPIENT"]
-    if not os.environ.get(name)
+    if not os.environ.get(name, "").strip()
 ]
 for name in missingVariables:
     print(name + " environment variable not set!")
