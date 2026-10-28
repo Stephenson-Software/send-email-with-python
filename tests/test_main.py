@@ -255,6 +255,37 @@ class TestUseTLS(unittest.TestCase):
         self.assertEqual(str(caught.exception), "550 rejected")
         mock_smtp.return_value.__exit__.assert_called_once()
 
+    @patch("smtplib.SMTP")
+    def test_propagates_a_rejected_login_without_sending(self, mock_smtp):
+        # run() relies on this reaching it to print the login hint
+        server = mock_smtp.return_value.__enter__.return_value
+        server.login.side_effect = main.smtplib.SMTPAuthenticationError(
+            535, b"rejected"
+        )
+
+        with patch("builtins.print"):
+            with self.assertRaises(main.smtplib.SMTPAuthenticationError):
+                main.useTLS()
+
+        server.send_message.assert_not_called()
+        mock_smtp.return_value.__exit__.assert_called_once()
+
+    @patch("smtplib.SMTP")
+    def test_a_failed_upgrade_stops_before_the_credentials_are_sent(self, mock_smtp):
+        # logging in after a failed starttls would send the app password in plaintext
+        server = mock_smtp.return_value.__enter__.return_value
+        server.starttls.side_effect = main.smtplib.SMTPNotSupportedError(
+            "STARTTLS extension not supported by server."
+        )
+
+        with patch("builtins.print"):
+            with self.assertRaises(main.smtplib.SMTPNotSupportedError):
+                main.useTLS()
+
+        server.login.assert_not_called()
+        server.send_message.assert_not_called()
+        mock_smtp.return_value.__exit__.assert_called_once()
+
     @patch("smtplib.SMTP", side_effect=OSError("connection refused"))
     def test_surfaces_the_original_error_when_the_connection_fails(self, mock_smtp):
         # a failed connect used to be masked by UnboundLocalError from the
