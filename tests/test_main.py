@@ -415,6 +415,44 @@ class TestRun(unittest.TestCase):
                 )
 
 
+class TestRunEndToEnd(unittest.TestCase):
+    # run() goes through the real transport and send functions,
+    # with only the smtplib connections replaced
+    def test_a_successful_send_logs_in_sends_once_and_returns_normally(self):
+        for answer, transport, used, unused, port in (
+            ("s", "SSL", "smtplib.SMTP_SSL", "smtplib.SMTP", 465),
+            ("t", "TLS", "smtplib.SMTP", "smtplib.SMTP_SSL", 587),
+        ):
+            with self.subTest(answer=answer):
+                with patch("builtins.input", return_value=answer), patch(
+                    used
+                ) as mock_used, patch(
+                    unused, side_effect=AssertionError("wrong transport")
+                ) as mock_unused, patch(
+                    "builtins.print"
+                ) as mock_print:
+                    server = mock_used.return_value.__enter__.return_value
+                    main.run()
+                self.assertEqual(mock_used.call_args.args, ("smtp.gmail.com", port))
+                mock_unused.assert_not_called()
+                server.login.assert_called_once_with(
+                    main.EMAIL_SENDER_ADDRESS, main.EMAIL_SENDER_APP_PASSWORD
+                )
+                server.send_message.assert_called_once()
+                message = server.send_message.call_args.args[0]
+                self.assertEqual(message["From"], main.EMAIL_SENDER_ADDRESS)
+                self.assertEqual(message["To"], main.EMAIL_RECIPIENT)
+                self.assertIn(message.get_content().rstrip("\n"), main.messages)
+                self.assertEqual(
+                    mock_print.call_args_list,
+                    [
+                        call("Logging in with " + transport + "..."),
+                        call("Login successful!"),
+                        call("Email sent to " + main.EMAIL_RECIPIENT + "!"),
+                    ],
+                )
+
+
 class TestRunScript(unittest.TestCase):
     @unittest.skipIf(shutil.which("bash") is None, "bash not available")
     def test_finds_main_py_when_launched_outside_the_repository_root(self):
