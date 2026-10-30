@@ -6,7 +6,7 @@ This repository is for practicing sending email with python.
 - A Gmail account with 2-Step Verification enabled and an [app password](https://support.google.com/accounts/answer/185833) generated for it
 
 ## Configuration
-Three environment variables are read at startup. If any are missing, empty, or only whitespace, the program names every one of them and exits with status 1 before any connection is attempted.
+Three environment variables are read at startup. If any are missing, empty, or only whitespace, the program names every one of them and exits with status 1 before any connection is attempted. Leading and trailing whitespace (such as a stray space or a `\r` from a file saved with Windows line endings) is stripped from each value before it is used; spaces inside a value are kept.
 
 | Variable | Description |
 | --- | --- |

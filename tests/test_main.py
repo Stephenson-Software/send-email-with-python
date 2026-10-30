@@ -107,6 +107,20 @@ class TestCredentialGuards(unittest.TestCase):
             ],
         )
 
+    def test_surrounding_whitespace_is_stripped_from_the_values_used(self):
+        padded = {
+            "EMAIL_SENDER_ADDRESS": " padded-sender@example.com\r",
+            "EMAIL_SENDER_APP_PASSWORD": "\tabcd efgh ijkl mnop\r\n",
+            "EMAIL_RECIPIENT": "padded-recipient@example.com ",
+        }
+        with patch.dict(os.environ, padded):
+            # not run as __main__, so the prompt is never reached
+            module = runpy.run_path(MAIN_PATH, run_name="padded")
+        self.assertEqual(module["EMAIL_SENDER_ADDRESS"], "padded-sender@example.com")
+        # internal spaces are kept, since Google shows app passwords in groups
+        self.assertEqual(module["EMAIL_SENDER_APP_PASSWORD"], "abcd efgh ijkl mnop")
+        self.assertEqual(module["EMAIL_RECIPIENT"], "padded-recipient@example.com")
+
 
 class TestGetRandomMessage(unittest.TestCase):
     def test_returns_a_message_from_the_list(self):

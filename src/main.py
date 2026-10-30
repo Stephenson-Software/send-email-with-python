@@ -15,9 +15,10 @@ for name in missingVariables:
     print(name + " environment variable not set!")
 if missingVariables:
     sys.exit(1)
-EMAIL_SENDER_ADDRESS = os.environ.get("EMAIL_SENDER_ADDRESS")
-EMAIL_SENDER_APP_PASSWORD = os.environ.get("EMAIL_SENDER_APP_PASSWORD")
-EMAIL_RECIPIENT = os.environ.get("EMAIL_RECIPIENT")
+# stripped the same way the check above was, so a stray space or \r is not sent
+EMAIL_SENDER_ADDRESS = os.environ["EMAIL_SENDER_ADDRESS"].strip()
+EMAIL_SENDER_APP_PASSWORD = os.environ["EMAIL_SENDER_APP_PASSWORD"].strip()
+EMAIL_RECIPIENT = os.environ["EMAIL_RECIPIENT"].strip()
 
 # gmail smtp endpoint and subject shared by both transports
 SMTP_HOST = "smtp.gmail.com"
