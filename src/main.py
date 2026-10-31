@@ -107,6 +107,11 @@ def run():
         print(f"Failed to send email: {e}")
         print("Login rejected! Check EMAIL_SENDER_ADDRESS, and that EMAIL_SENDER_APP_PASSWORD is an app password, not the account password.")
         sys.exit(1)
+    except smtplib.SMTPRecipientsRefused as e:
+        # the server turned down the address itself, so name the variable it came from
+        print(f"Failed to send email: {e}")
+        print("Recipient refused! Check that EMAIL_RECIPIENT is a valid email address.")
+        sys.exit(1)
     except Exception as e:
         print(f"Failed to send email: {e}")
         sys.exit(1)

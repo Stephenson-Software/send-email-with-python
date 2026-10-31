@@ -415,6 +415,29 @@ class TestRun(unittest.TestCase):
                 for printed in mock_print.call_args_list:
                     self.assertNotIn(main.EMAIL_SENDER_APP_PASSWORD, printed.args[0])
 
+    def test_a_refused_recipient_names_the_recipient_variable(self):
+        refusal = main.smtplib.SMTPRecipientsRefused(
+            {"someone@example": (553, b"5.1.3 not a valid RFC-5321 address.")}
+        )
+        for answer, transport in (("s", "useSSL"), ("t", "useTLS")):
+            with self.subTest(transport=transport):
+                with patch("builtins.input", return_value=answer), patch.object(
+                    main, transport, side_effect=refusal
+                ), patch("builtins.print") as mock_print:
+                    with self.assertRaises(SystemExit) as caught:
+                        main.run()
+                self.assertEqual(caught.exception.code, 1)
+                self.assertEqual(
+                    mock_print.call_args_list,
+                    [
+                        call("Failed to send email: " + str(refusal)),
+                        call(
+                            "Recipient refused! Check that EMAIL_RECIPIENT is a "
+                            "valid email address."
+                        ),
+                    ],
+                )
+
     def test_ctrl_c_during_the_send_exits_nonzero_without_a_traceback(self):
         for answer, transport in (("s", "useSSL"), ("t", "useTLS")):
             with self.subTest(transport=transport):

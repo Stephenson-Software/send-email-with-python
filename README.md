@@ -46,9 +46,15 @@ The answer is case-insensitive and surrounding whitespace is ignored, so `S` or 
 - Anything else — prints `Invalid input! Please type 's' or 't'.` and exits with status 1 without connecting
 - No answer (Ctrl-C, Ctrl-D, or a closed stdin) — prints `No answer given! Exiting without sending.` and exits with status 1 without connecting
 
-Both answers log in to Gmail and send a real email containing one randomly chosen message from the list in `src/main.py`.
+Both answers log in to Gmail and send a real email containing one randomly chosen message from the list in `src/main.py`, with the subject `Test email from Python`. A successful run prints the following and exits with status 0 (with `t`, the first line reads `Logging in with TLS...`):
 
-If the send fails — an unreachable server, a rejected login, a refused recipient — the reason is printed as `Failed to send email: <reason>` and the program exits with status 1, so `run.sh` reports the failure rather than a success. When Gmail rejects the login specifically, a second line follows: `Login rejected! Check EMAIL_SENDER_ADDRESS, and that EMAIL_SENDER_APP_PASSWORD is an app password, not the account password.` Pressing Ctrl-C while connecting or sending prints `Interrupted! The email may not have been sent.` and also exits with status 1.
+```
+Logging in with SSL...
+Login successful!
+Email sent to someone@example.com!
+```
+
+If the send fails — an unreachable server, a rejected login, a refused recipient — the reason is printed as `Failed to send email: <reason>` and the program exits with status 1, so `run.sh` reports the failure rather than a success. When Gmail rejects the login specifically, a second line follows: `Login rejected! Check EMAIL_SENDER_ADDRESS, and that EMAIL_SENDER_APP_PASSWORD is an app password, not the account password.` When Gmail refuses the recipient address (for example one with no `@`), the second line is `Recipient refused! Check that EMAIL_RECIPIENT is a valid email address.` Pressing Ctrl-C while connecting or sending prints `Interrupted! The email may not have been sent.` and also exits with status 1.
 
 ## Tests
 The test suite uses the standard library's `unittest` module and mocks every SMTP
