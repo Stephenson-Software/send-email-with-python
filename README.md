@@ -54,7 +54,7 @@ Login successful!
 Email sent to someone@example.com!
 ```
 
-If the send fails — an unreachable server, a rejected login, a refused recipient — the reason is printed as `Failed to send email: <reason>` and the program exits with status 1, so `run.sh` reports the failure rather than a success. When Gmail rejects the login specifically, a second line follows: `Login rejected! Check EMAIL_SENDER_ADDRESS, and that EMAIL_SENDER_APP_PASSWORD is an app password, not the account password.` When Gmail refuses the recipient address (for example one with no valid domain), the second line is `Recipient refused! Check that EMAIL_RECIPIENT is a valid email address.` Pressing Ctrl-C while connecting or sending prints `Interrupted! The email may not have been sent.` and also exits with status 1.
+If the send fails — an unreachable server, a rejected login, a refused recipient — the reason is printed as `Failed to send email: <reason>` and the program exits with status 1, so `run.sh` reports the failure rather than a success. When Gmail rejects the login specifically, a second line follows: `Login rejected! Check EMAIL_SENDER_ADDRESS, and that EMAIL_SENDER_APP_PASSWORD is an app password, not the account password.` When Gmail refuses the recipient address (for example one with no `@`), the second line is `Recipient refused! Check that EMAIL_RECIPIENT is a valid email address.` Pressing Ctrl-C while connecting or sending prints `Interrupted! The email may not have been sent.` and also exits with status 1.
 
 ## Tests
 The test suite uses the standard library's `unittest` module and mocks every SMTP
