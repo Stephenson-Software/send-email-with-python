@@ -24,6 +24,8 @@ EMAIL_RECIPIENT = os.environ["EMAIL_RECIPIENT"].strip()
 SMTP_HOST = "smtp.gmail.com"
 SMTP_SSL_PORT = 465
 SMTP_TLS_PORT = 587
+# without a limit, a server that stops responding hangs the run forever
+SMTP_TIMEOUT_SECONDS = 30
 EMAIL_SUBJECT = "Test email from Python"
 
 # list of messages to send
@@ -47,7 +49,7 @@ def useSSL():
     print("Logging in with SSL...")
     context = ssl.create_default_context()
 
-    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_SSL_PORT, context=context) as server:
+    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_SSL_PORT, context=context, timeout=SMTP_TIMEOUT_SECONDS) as server:
         server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_APP_PASSWORD)
         print("Login successful!")
         sendRandomMessage(server)
@@ -57,7 +59,7 @@ def useTLS():
     context = ssl.create_default_context()
 
     # the context manager quits the session on every path out of the block
-    with smtplib.SMTP(SMTP_HOST, SMTP_TLS_PORT) as server:
+    with smtplib.SMTP(SMTP_HOST, SMTP_TLS_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
         server.ehlo() # say hello to server
         server.starttls(context=context) # start TLS encryption
         server.ehlo() # say hello again

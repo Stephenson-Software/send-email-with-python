@@ -191,6 +191,7 @@ class TestUseSSL(unittest.TestCase):
 
         self.assertEqual(mock_smtp_ssl.call_args[0][:2], ("smtp.gmail.com", 465))
         self.assertIsInstance(mock_smtp_ssl.call_args[1]["context"], ssl.SSLContext)
+        self.assertEqual(mock_smtp_ssl.call_args[1]["timeout"], 30)
         server.login.assert_called_once_with(
             main.EMAIL_SENDER_ADDRESS, main.EMAIL_SENDER_APP_PASSWORD
         )
@@ -246,6 +247,7 @@ class TestUseTLS(unittest.TestCase):
             main.useTLS()
 
         self.assertEqual(mock_smtp.call_args[0], ("smtp.gmail.com", 587))
+        self.assertEqual(mock_smtp.call_args[1]["timeout"], 30)
         self.assertEqual(
             [name for name, _, _ in server.method_calls],
             ["ehlo", "starttls", "ehlo", "login", "send_message"],
