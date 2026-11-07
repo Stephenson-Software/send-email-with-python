@@ -203,6 +203,16 @@ class TestUseSSL(unittest.TestCase):
         mock_smtp_ssl.return_value.__exit__.assert_called_once()
 
     @patch("smtplib.SMTP_SSL")
+    def test_verifies_the_server_certificate_and_hostname(self, mock_smtp_ssl):
+        # without these checks the app password could go to an impostor server
+        with patch("builtins.print"):
+            main.useSSL()
+
+        context = mock_smtp_ssl.call_args[1]["context"]
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+
+    @patch("smtplib.SMTP_SSL")
     def test_propagates_a_send_failure_and_still_ends_the_session(self, mock_smtp_ssl):
         server = mock_smtp_ssl.return_value.__enter__.return_value
         server.send_message.side_effect = Exception("550 rejected")
@@ -258,6 +268,18 @@ class TestUseTLS(unittest.TestCase):
         )
         # the session is ended by the context manager rather than an explicit quit
         mock_smtp.return_value.__exit__.assert_called_once()
+
+    @patch("smtplib.SMTP")
+    def test_verifies_the_server_certificate_and_hostname(self, mock_smtp):
+        # without these checks the app password could go to an impostor server
+        server = mock_smtp.return_value.__enter__.return_value
+
+        with patch("builtins.print"):
+            main.useTLS()
+
+        context = server.starttls.call_args[1]["context"]
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
 
     @patch("smtplib.SMTP")
     def test_propagates_a_send_failure_and_still_ends_the_session(self, mock_smtp):
