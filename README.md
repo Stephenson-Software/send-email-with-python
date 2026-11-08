@@ -58,7 +58,9 @@ If the send fails — an unreachable server, a server that stops responding for 
 
 ## Tests
 The test suite uses the standard library's `unittest` module and mocks every SMTP
-connection, so running it sends no email and opens no socket. From the repository root:
+connection, so running it sends no email and opens no socket. It replaces the three
+credential variables with dummy values before loading `src/main.py`, so credentials
+exported in the shell are never used by the tests. From the repository root:
 
 ```bash
 python3 -m unittest discover -s tests -t .
