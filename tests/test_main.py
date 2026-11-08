@@ -130,8 +130,10 @@ class TestDummyCredentials(unittest.TestCase):
     def test_the_suite_runs_against_the_dummy_credentials(self):
         # exported real credentials must not be the ones the tests pass to login
         self.assertEqual(main.EMAIL_SENDER_ADDRESS, DUMMY_CREDENTIALS["EMAIL_SENDER_ADDRESS"])
-        self.assertEqual(
-            main.EMAIL_SENDER_APP_PASSWORD, DUMMY_CREDENTIALS["EMAIL_SENDER_APP_PASSWORD"]
+        # compared without assertEqual, whose failure message would print the password
+        self.assertTrue(
+            main.EMAIL_SENDER_APP_PASSWORD == DUMMY_CREDENTIALS["EMAIL_SENDER_APP_PASSWORD"],
+            "EMAIL_SENDER_APP_PASSWORD is not the dummy value",
         )
         self.assertEqual(main.EMAIL_RECIPIENT, DUMMY_CREDENTIALS["EMAIL_RECIPIENT"])
 
