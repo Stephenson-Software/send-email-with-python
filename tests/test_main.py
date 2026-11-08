@@ -8,10 +8,14 @@ import unittest
 from unittest.mock import MagicMock, call, patch
 
 # main.py reads these at import time and exits when one is missing,
-# so they have to be set before the import below
-os.environ.setdefault("EMAIL_SENDER_ADDRESS", "sender@example.com")
-os.environ.setdefault("EMAIL_SENDER_APP_PASSWORD", "dummy-app-password")
-os.environ.setdefault("EMAIL_RECIPIENT", "recipient@example.com")
+# so they have to be set before the import below. they are overwritten,
+# not defaulted, so credentials exported in the shell never reach the tests
+DUMMY_CREDENTIALS = {
+    "EMAIL_SENDER_ADDRESS": "sender@example.com",
+    "EMAIL_SENDER_APP_PASSWORD": "dummy-app-password",
+    "EMAIL_RECIPIENT": "recipient@example.com",
+}
+os.environ.update(DUMMY_CREDENTIALS)
 
 # src/ is not a package
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -120,6 +124,16 @@ class TestCredentialGuards(unittest.TestCase):
         # internal spaces are kept, since Google shows app passwords in groups
         self.assertEqual(module["EMAIL_SENDER_APP_PASSWORD"], "abcd efgh ijkl mnop")
         self.assertEqual(module["EMAIL_RECIPIENT"], "padded-recipient@example.com")
+
+
+class TestDummyCredentials(unittest.TestCase):
+    def test_the_suite_runs_against_the_dummy_credentials(self):
+        # exported real credentials must not be the ones the tests pass to login
+        self.assertEqual(main.EMAIL_SENDER_ADDRESS, DUMMY_CREDENTIALS["EMAIL_SENDER_ADDRESS"])
+        self.assertEqual(
+            main.EMAIL_SENDER_APP_PASSWORD, DUMMY_CREDENTIALS["EMAIL_SENDER_APP_PASSWORD"]
+        )
+        self.assertEqual(main.EMAIL_RECIPIENT, DUMMY_CREDENTIALS["EMAIL_RECIPIENT"])
 
 
 class TestGetRandomMessage(unittest.TestCase):
