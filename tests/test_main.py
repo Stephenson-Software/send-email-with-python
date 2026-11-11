@@ -352,6 +352,13 @@ class TestUseTLS(unittest.TestCase):
 
 
 class TestRun(unittest.TestCase):
+    def test_asks_with_the_prompt_shown_in_the_readme(self):
+        with patch("builtins.input", return_value="s") as mock_input, patch.object(
+            main, "useSSL"
+        ):
+            main.run()
+        mock_input.assert_called_once_with("Use SSL or TLS? (s/t): ")
+
     def test_s_selects_ssl(self):
         with patch("builtins.input", return_value="s"), patch.object(
             main, "useSSL"
@@ -539,6 +546,29 @@ class TestRunScript(unittest.TestCase):
         result = subprocess.run(
             ["bash", os.path.abspath(RUN_SH_PATH)],
             cwd=os.path.dirname(__file__),
+            env=env,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(
+            result.stdout,
+            "".join(
+                variable + " environment variable not set!\n"
+                for variable in CREDENTIAL_VARIABLES
+            ),
+        )
+
+    @unittest.skipIf(shutil.which("bash") is None, "bash not available")
+    @unittest.skipUnless(
+        os.access(RUN_SH_PATH, os.X_OK), "run.sh is not executable in this checkout"
+    )
+    def test_runs_when_executed_directly_as_the_readme_shows(self):
+        # ./run.sh only works with a real #! line; a comment there makes exec fail
+        env = {k: v for k, v in os.environ.items() if k not in CREDENTIAL_VARIABLES}
+        result = subprocess.run(
+            [os.path.abspath(RUN_SH_PATH)],
             env=env,
             stdin=subprocess.DEVNULL,
             capture_output=True,
