@@ -1,3 +1,4 @@
+import ast
 import os
 import runpy
 import shutil
@@ -136,6 +137,16 @@ class TestDummyCredentials(unittest.TestCase):
             "EMAIL_SENDER_APP_PASSWORD is not the dummy value",
         )
         self.assertEqual(main.EMAIL_RECIPIENT, DUMMY_CREDENTIALS["EMAIL_RECIPIENT"])
+
+
+class TestMinimumPythonVersion(unittest.TestCase):
+    # ast only accepts feature_version from 3.8 on
+    @unittest.skipIf(sys.version_info < (3, 8), "ast feature_version needs Python 3.8")
+    def test_main_py_parses_as_the_python_3_6_the_readme_requires(self):
+        with open(MAIN_PATH) as source:
+            # best effort: catches some newer syntax, such as f"{e=}" from 3.8,
+            # but not all of it, and never a newer stdlib call
+            ast.parse(source.read(), filename=MAIN_PATH, feature_version=(3, 6))
 
 
 class TestGetRandomMessage(unittest.TestCase):

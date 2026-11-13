@@ -2,7 +2,7 @@
 This repository is for practicing sending email with python.
 
 ## Requirements
-- Python 3 (only the standard library is used — nothing to install)
+- Python 3.6 or newer (only the standard library is used — nothing to install)
 - A Gmail account with 2-Step Verification enabled and an [app password](https://support.google.com/accounts/answer/185833) generated for it
 
 ## Configuration
@@ -60,7 +60,7 @@ If the send fails — an unreachable server, a server that stops responding for 
 The test suite uses the standard library's `unittest` module and mocks every SMTP
 connection, so running it sends no email and opens no socket. It replaces the three
 credential variables with dummy values before loading `src/main.py`, so credentials
-exported in the shell are never used by the tests. From the repository root:
+exported in the shell are never used by the tests. The suite needs Python 3.7 or newer. From the repository root:
 
 ```bash
 python3 -m unittest discover -s tests -t .
