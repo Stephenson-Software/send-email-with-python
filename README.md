@@ -20,6 +20,13 @@ export EMAIL_SENDER_APP_PASSWORD="abcdefghijklmnop"
 export EMAIL_RECIPIENT="someone@example.com"
 ```
 
+Typing the real app password into an `export` line like the one above saves it in plain text in your shell history (e.g. `~/.bash_history`). To keep it out, read it without echoing instead — paste or type the password, then press Enter:
+
+```bash
+read -rs EMAIL_SENDER_APP_PASSWORD
+export EMAIL_SENDER_APP_PASSWORD
+```
+
 ## Usage
 ```bash
 ./run.sh
